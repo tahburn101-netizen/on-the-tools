@@ -1,0 +1,197 @@
+{
+  "project_name": "On The Tools - Cutting Edge Supplies",
+  "app_type": "hybrid_fullstack",
+  "theme": "dark",
+  "archetype": "Archetype 2: The Performance Pro + Archetype 7: Electric Neon",
+  "design_philosophy": {
+    "rationale": "An industrial, unapologetic, high-performance aesthetic targeted at professional tradesmen and B2B bulk buyers. Merges deep tactical obsidian blacks with high-visibility kinetic neon lime-green triggers. Cinematic, spark-filled motion design creates a $25,000 premium feel, distancing the brand from generic hardware stores.",
+    "criteria_25k": [
+      "Custom framer-motion scroll sequences and parallax reveals",
+      "TSParticles integration for dynamic cutting sparks",
+      "Micro-interactions on all kinetic triggers (neon glow on hover)",
+      "Premium typographic tension (Massive brutalist headers vs technical body copy)",
+      "Flawless mobile-first responsive architecture",
+      "Performance-optimized images with skeleton loaders"
+    ]
+  },
+  "colors": {
+    "background": {
+      "primary": "#000000",
+      "secondary": "#0A0A0A",
+      "card": "#111111"
+    },
+    "brand": {
+      "primary": "#C6FF00",
+      "primary_hover": "#AEE500",
+      "silver_accent": "#D1D5DB",
+      "dark_metal": "#1F2937"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#9CA3AF",
+      "inverse": "#000000",
+      "neon": "#C6FF00"
+    },
+    "border": {
+      "subtle": "#1F2937",
+      "focus": "#C6FF00"
+    }
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Anton",
+      "subheading": "Barlow",
+      "body": "Barlow"
+    },
+    "scales": {
+      "h1": "text-5xl sm:text-6xl lg:text-7xl uppercase tracking-tighter leading-none",
+      "h2": "text-4xl sm:text-5xl uppercase tracking-tight",
+      "h3": "text-2xl sm:text-3xl uppercase tracking-tight",
+      "h4": "text-lg sm:text-xl font-bold tracking-wide",
+      "body": "text-base leading-relaxed tracking-wide text-gray-300",
+      "overline": "text-sm uppercase tracking-[0.2em] text-lime-400 font-bold"
+    },
+    "rules": [
+      "Headings must always be uppercase to convey industrial strength.",
+      "Never use Inter or Roboto.",
+      "Overlines must be neon lime to create technical contrast."
+    ]
+  },
+  "visual_enhancers": {
+    "surfaces": [
+      {
+        "name": "Tactical Card",
+        "classes": "bg-[#111111] border border-gray-800 rounded-none shadow-none hover:border-[#C6FF00]/50 transition-colors duration-300",
+        "usage": "Products, Testimonials, Form containers"
+      },
+      {
+        "name": "Neon Feature Strip",
+        "classes": "bg-[#C6FF00] text-black",
+        "usage": "Highlight banners, marquee text, CTA blocks"
+      }
+    ],
+    "animations": {
+      "hero": "Parallax scale-in with trailing TSParticles (sparks) emitting from the bottom right.",
+      "scroll": "Staggered fade-up for product grids using Framer Motion.",
+      "hover": "Buttons have a sharp transform (scale 1.05) with an intense neon drop-shadow: `hover:drop-shadow-[0_0_15px_rgba(198,255,0,0.6)]`.",
+      "counters": "Animated gauge counters for stats (e.g., '1M+ Cuts Made')."
+    }
+  },
+  "image_urls": {
+    "brand": [
+      {
+        "url": "https://customer-assets.emergentagent.com/job_f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/artifacts/x4yt7xow_IMG-20260405-WA0016.jpg",
+        "description": "Main Brand Logo. NOTE: Use CSS mix-blend-mode: screen or lighten to drop the black background if it is not naturally transparent.",
+        "category": "logo"
+      }
+    ],
+    "products": [
+      {
+        "url": "https://customer-assets.emergentagent.com/job_f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/artifacts/bs3n5039_IMG-20260422-WA0000.jpg",
+        "description": "Product Disc Visual (Cutting Disc)",
+        "category": "product_hero"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://customer-assets.emergentagent.com/job_f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/artifacts/wgcnnang_IMG-20260405-WA0015.jpg",
+        "description": "Reference Homepage Layout",
+        "category": "reference"
+      },
+      {
+        "url": "https://customer-assets.emergentagent.com/job_f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/artifacts/stkni8t9_IMG-20260405-WA0017.jpg",
+        "description": "Reference Contact/Trade Layout",
+        "category": "reference"
+      }
+    ],
+    "hero_and_backgrounds": [
+      {
+        "url": "https://images.unsplash.com/reserve/7vjJbdDRga27ApDoYicw_Sparks.jpg?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwzfHxtZXRhbCUyMGN1dHRpbmclMjBncmluZGVyJTIwc3BhcmtzfGVufDB8fHx8MTc3ODc5ODgyM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Time-lapse photography of person grinding during nighttime with massive sparks.",
+        "category": "hero_background"
+      },
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/images/6d9251c44a483da1d21c853284bdadc3ddc433d483b74c0ac7885d8a6e0b799e.png",
+        "description": "Dark brushed metal texture, industrial steel surface. Great for section backgrounds.",
+        "category": "texture_background"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1564182842519-8a3b2af3e228?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHw0fHxtZXRhbCUyMGN1dHRpbmclMjBncmluZGVyJTIwc3BhcmtzfGVufDB8fHx8MTc3ODc5ODgyM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Man using a grinder on a piece of metal.",
+        "category": "testimonial_background"
+      },
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/images/e2eb3a594c6d54ec7b22280149cb0f4449a5d72a6e0b24f705fa6d9ec837e3df.png",
+        "description": "Cinematic 3D render of bright neon lime green sparks.",
+        "category": "graphic_element"
+      }
+    ]
+  },
+  "layouts": {
+    "navigation": {
+      "style": "Sticky header with ultra-dark glassmorphism (bg-black/90 backdrop-blur-md) and a 1px solid bottom border (border-gray-800).",
+      "links": ["Products", "About", "FAQ", "Trade Enquiries"],
+      "cta": "Buy In Bulk (Solid Neon Button)"
+    },
+    "homepage": {
+      "sections": [
+        {
+          "name": "Hero",
+          "layout": "Grid-cols-1 md:grid-cols-2. Left: H1 'BUILT TO CUT. BUILT TO LAST.', Subtitle, primary CTA. Right: Product image hovering over sparks background.",
+          "special": "Overlay opacity bg-black/40 over the background image to ensure text pops."
+        },
+        {
+          "name": "Feature Strip",
+          "layout": "Full width, solid bg-[#C6FF00], text-black. Use react-fast-marquee with 'INDUSTRIAL GRADE // CLEAN CUTS // HIGH SPEED // SAFER WORKING'.",
+          "typography": "text-2xl font-bold uppercase tracking-widest"
+        },
+        {
+          "name": "Product Range Strip",
+          "layout": "Bento Grid (3 columns). Seed products: 115mm 1mm disc, 115mm 3mm disc, 115mm 6mm grinding disc. Cards are dark carbon, product image centered, neon border on hover."
+        },
+        {
+          "name": "Why Professionals Choose Us",
+          "layout": "Split layout. Left: Dark brushed metal texture bg, Gauge counters. Right: Testimonial cards with overlapping placement."
+        }
+      ]
+    },
+    "catalogue_page": {
+      "layout": "Filter sidebar (left, hidden on mobile) and Grid layout (right). Products displayed in sharp, cornerless dark cards. Images zoom slightly on hover."
+    },
+    "product_detail_page": {
+      "layout": "2-column grid. Left: Sticky image gallery. Right: Title, Specs, Description. \nButtons MUST be structured as: \n1. 'Buy Now' -> bg-transparent border-2 border-[#C6FF00] text-[#C6FF00] (Amazon redirect)\n2. 'Buy in Bulk' -> bg-[#C6FF00] text-black (Jumps to Trade Enquiries page)."
+    },
+    "trade_enquiries_page": {
+      "layout": "Centered constrained layout. Dark card container (bg-[#111111] p-8).",
+      "form_fields": ["Full Name", "Company", "Phone", "Email", "Product Needed (Dropdown)", "Quantity", "Message"],
+      "cta": "Submit Enquiry (bg-[#C6FF00] text-black w-full mt-6)"
+    },
+    "admin_dashboard": {
+      "layout": "Sidebar navigation (Messages, Products) + Main Content Area.",
+      "style": "Strict dark technical grid, high density. No gradients.",
+      "features": [
+        "Messages Inbox: View form submissions, Reply thread",
+        "Product CRUD: Add/Edit/Delete products, Image upload, Amazon URL input field."
+      ]
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#C6FF00] text-black font-bold uppercase tracking-wider px-8 py-4 hover:bg-[#AEE500] hover:-translate-y-1 transition-all rounded-none",
+      "outline": "bg-transparent text-[#C6FF00] border-2 border-[#C6FF00] font-bold uppercase tracking-wider px-8 py-4 hover:bg-[#C6FF00]/10 hover:-translate-y-1 transition-all rounded-none"
+    },
+    "inputs": {
+      "style": "bg-[#111111] border border-gray-700 text-white rounded-none focus:border-[#C6FF00] focus:ring-1 focus:ring-[#C6FF00] placeholder:text-gray-600 px-4 py-3"
+    },
+    "testing_requirements": "All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='buy-now-button', data-testid='trade-form-submit')."
+  },
+  "instructions_to_main_agent": [
+    "Use raw HTML/Tailwind for marketing sections (Home, Hero, Testimonials) to maintain the brutalist bento grids and strict asymmetry.",
+    "Use Shadcn UI for the Admin Panel, Forms, and Data Tables, heavily modifying them to remove round corners (rounded-none) and apply the dark tactical theme.",
+    "Implement TSParticles for the 'sparks' effect in the hero section.",
+    "Ensure 'Lenis' is used for premium smooth scrolling.",
+    "For the main logo image (.jpg), apply CSS 'mix-blend-mode: screen' or 'mix-blend-mode: lighten' if it has a solid black background to make it transparent against the dark nav.",
+    "Buttons on product pages must explicitly follow the specification: 'Buy Now' for Amazon links, 'Buy In Bulk' leading to the contact form.",
+    "Ensure total alignment with a $25k standard: micro-interactions on hovers, fluid typography, no default scrollbars."
+  ]
+}
