@@ -264,8 +264,10 @@ async def me(admin: dict = Depends(get_current_admin)):
 
 # ---- Products ----
 @api.get("/products", response_model=List[Product])
-async def list_products():
-    docs = await db.products.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+async def list_products(limit: int = 100, skip: int = 0):
+    limit = max(1, min(limit, 200))
+    skip = max(0, skip)
+    docs = await db.products.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     return docs
 
 
@@ -393,8 +395,10 @@ async def submit_message(payload: MessageCreate):
 
 
 @api.get("/messages")
-async def list_messages(admin: dict = Depends(get_current_admin)):
-    docs = await db.messages.find({}, {"_id": 0}).sort("created_at", -1).to_list(2000)
+async def list_messages(admin: dict = Depends(get_current_admin), limit: int = 100, skip: int = 0):
+    limit = max(1, min(limit, 500))
+    skip = max(0, skip)
+    docs = await db.messages.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     return docs
 
 
@@ -450,14 +454,17 @@ async def analytics_summary(admin: dict = Depends(get_current_admin)):
     last_7d = (now - timedelta(days=7)).isoformat()
     last_30d = (now - timedelta(days=30)).isoformat()
 
-    clicks = await db.clicks.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
-    msgs = await db.messages.find({}, {"_id": 0, "created_at": 1, "status": 1}).to_list(2000)
-    products = await db.products.find({}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).to_list(1000)
+    clicks = await db.clicks.find(
+        {"created_at": {"$gte": last_30d}},
+        {"_id": 0, "id": 1, "product_id": 1, "product_name": 1, "product_slug": 1, "referrer": 1, "user_agent": 1, "created_at": 1},
+    ).sort("created_at", -1).limit(2000).to_list(2000)
+    msgs = await db.messages.find({}, {"_id": 0, "created_at": 1, "status": 1}).limit(2000).to_list(2000)
+    products = await db.products.find({}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).limit(500).to_list(500)
 
-    total_clicks = len(clicks)
+    total_clicks = await db.clicks.count_documents({})
     clicks_24h = sum(1 for c in clicks if c["created_at"] >= last_24h)
     clicks_7d = sum(1 for c in clicks if c["created_at"] >= last_7d)
-    clicks_30d = sum(1 for c in clicks if c["created_at"] >= last_30d)
+    clicks_30d = len(clicks)
 
     by_product = CCounter()
     for c in clicks:
