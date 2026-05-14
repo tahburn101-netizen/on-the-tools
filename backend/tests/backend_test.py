@@ -203,10 +203,10 @@ class TestMessages:
         assert reply["body"] == "TEST reply body"
         assert reply["author"] == ADMIN_EMAIL
 
-        # Verify reply persisted & status updated
-        r = admin_client.get(f"{API}/messages/{msg_id}")
+        # Verify reply persisted & status updated via list endpoint
+        r = admin_client.get(f"{API}/messages")
         assert r.status_code == 200
-        msg = r.json()
+        msg = next(m for m in r.json() if m["id"] == msg_id)
         assert msg["status"] == "replied"
         assert len(msg["replies"]) == 1
         assert msg["replies"][0]["body"] == "TEST reply body"
@@ -217,3 +217,100 @@ class TestMessages:
     def test_reply_requires_auth(self, api_client):
         r = api_client.post(f"{API}/messages/anything/reply", json={"body": "x"})
         assert r.status_code == 401
+
+
+# ----- Click tracking -----
+class TestClicks:
+    def test_log_click_for_real_product(self, api_client):
+        # Use first seeded product id
+        products = api_client.get(f"{API}/products").json()
+        assert len(products) >= 1
+        pid = products[0]["id"]
+        r = api_client.post(f"{API}/clicks", json={"product_id": pid, "referrer": "TEST_pytest"})
+        assert r.status_code == 200, r.text
+        assert r.json().get("ok") is True
+
+    def test_log_click_invalid_product(self, api_client):
+        r = api_client.post(f"{API}/clicks", json={"product_id": "non-existent-id-xyz", "referrer": "TEST"})
+        assert r.status_code == 404
+
+
+# ----- Analytics -----
+class TestAnalytics:
+    def test_summary_requires_auth(self, api_client):
+        r = api_client.get(f"{API}/analytics/summary")
+        assert r.status_code == 401
+
+    def test_summary_shape(self, admin_client, api_client):
+        # Seed a click to make data more meaningful
+        products = api_client.get(f"{API}/products").json()
+        pid = products[0]["id"]
+        api_client.post(f"{API}/clicks", json={"product_id": pid, "referrer": "TEST_analytics"})
+
+        r = admin_client.get(f"{API}/analytics/summary")
+        assert r.status_code == 200
+        d = r.json()
+        for k in ("total_clicks", "clicks_24h", "clicks_7d", "top_products", "daily_clicks", "recent_clicks"):
+            assert k in d, f"Missing key: {k}"
+        assert isinstance(d["total_clicks"], int) and d["total_clicks"] >= 1
+        assert isinstance(d["daily_clicks"], list) and len(d["daily_clicks"]) == 7
+        for entry in d["daily_clicks"]:
+            assert "date" in entry and "clicks" in entry
+        assert isinstance(d["top_products"], list)
+        if d["top_products"]:
+            tp = d["top_products"][0]
+            for k in ("product_id", "name", "slug", "clicks"):
+                assert k in tp
+
+
+# ----- Image uploads -----
+def _make_png_bytes() -> bytes:
+    # 1x1 transparent PNG (smallest valid PNG)
+    import base64
+    return base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+    )
+
+
+class TestUploads:
+    def test_upload_requires_auth(self, api_client):
+        png = _make_png_bytes()
+        r = api_client.post(
+            f"{API}/uploads/image",
+            files={"file": ("test.png", png, "image/png")},
+            headers={"Content-Type": None},  # let requests build multipart
+        )
+        assert r.status_code == 401
+
+    def test_upload_png_success(self, admin_token):
+        png = _make_png_bytes()
+        r = requests.post(
+            f"{API}/uploads/image",
+            files={"file": ("TEST_tiny.png", png, "image/png")},
+            headers={"Authorization": f"Bearer {admin_token}"},
+            timeout=60,
+        )
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert "url" in data and data["url"].startswith("/api/files/")
+        assert "id" in data and "path" in data
+
+        # Serve back via GET /api/files/{path}
+        r2 = requests.get(f"{BASE_URL}{data['url']}", timeout=60)
+        assert r2.status_code == 200
+        assert r2.headers.get("content-type", "").startswith("image/")
+        assert len(r2.content) == len(png)
+
+    def test_upload_rejects_non_image(self, admin_token):
+        r = requests.post(
+            f"{API}/uploads/image",
+            files={"file": ("bad.txt", b"hello world", "text/plain")},
+            headers={"Authorization": f"Bearer {admin_token}"},
+            timeout=60,
+        )
+        assert r.status_code == 400
+
+    def test_serve_file_404_for_unknown_path(self, api_client):
+        r = api_client.get(f"{API}/files/nonexistent/path/abc.png")
+        assert r.status_code == 404
+

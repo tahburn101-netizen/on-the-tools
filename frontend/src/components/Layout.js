@@ -143,8 +143,13 @@ function Footer() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-neutral-900 py-6 text-center text-metal-dim text-xs tracking-widest uppercase">
-        © {new Date().getFullYear()} On The Tools · Cutting Edge Supplies
+      <div className="border-t border-neutral-900 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 lg:px-10 max-w-7xl mx-auto text-metal-dim text-xs tracking-widest uppercase">
+        <span>© {new Date().getFullYear()} On The Tools · Cutting Edge Supplies</span>
+        <div className="flex items-center gap-5">
+          <Link to="/privacy" className="hover:text-neon" data-testid="footer-privacy-link">Privacy Policy</Link>
+          <Link to="/contact" className="hover:text-neon">Trade Enquiries</Link>
+          <Link to="/admin/login" className="hover:text-neon" data-testid="footer-admin-link">Admin</Link>
+        </div>
       </div>
     </footer>
   );

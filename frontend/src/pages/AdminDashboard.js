@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -12,14 +12,173 @@ import {
   Pencil,
   ExternalLink,
   Check,
+  Upload,
+  BarChart3,
+  MousePointerClick,
+  TrendingUp,
+  Inbox,
+  Box,
 } from "lucide-react";
 import Logo from "../components/Logo";
+import AnimatedCounter from "../components/AnimatedCounter";
 import { useAuth } from "../context/AuthContext";
 import { api, formatApiErrorDetail } from "../lib/api";
+
+const BACKEND = process.env.REACT_APP_BACKEND_URL;
+
+// Image URL helper: handles relative API paths (object storage) and absolute URLs
+const resolveImg = (u) => {
+  if (!u) return "";
+  if (u.startsWith("http")) return u;
+  if (u.startsWith("/api/")) return `${BACKEND}${u}`;
+  return u; // /disc-115mm.png etc. served from frontend public
+};
 
 const inputCls =
   "w-full bg-black border border-neutral-800 text-white px-4 py-3 placeholder:text-neutral-600 focus:border-neon focus:outline-none";
 
+/* ---------------- ANALYTICS ---------------- */
+function AnalyticsPanel() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await api.get("/analytics/summary");
+      setData(r.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  if (loading || !data) return <p className="text-metal-dim">Loading analytics…</p>;
+
+  const maxDaily = Math.max(1, ...data.daily_clicks.map((d) => d.clicks));
+
+  const Stat = ({ icon: Icon, label, value, sub, testid }) => (
+    <div className="bg-ink-900 border border-neutral-900 p-6 hover-lift hover:border-neon/40" data-testid={testid}>
+      <div className="flex items-center justify-between">
+        <span className="font-heading uppercase tracking-widest text-xs text-metal-dim">{label}</span>
+        <Icon className="h-5 w-5 text-neon" />
+      </div>
+      <div className="mt-3 text-4xl font-heading text-white">
+        <AnimatedCounter to={value} duration={1.2} />
+      </div>
+      {sub && <p className="text-metal-dim text-xs mt-2 uppercase tracking-widest">{sub}</p>}
+    </div>
+  );
+
+  return (
+    <div data-testid="admin-analytics-panel" className="space-y-6">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h2 className="font-heading uppercase tracking-wider text-2xl">Analytics</h2>
+          <p className="text-metal-dim text-sm">Live conversion + engagement data</p>
+        </div>
+        <button onClick={load} className="border border-neutral-800 text-white px-4 py-2 hover:border-neon hover:text-neon font-heading uppercase tracking-wider text-xs" data-testid="analytics-refresh">
+          Refresh
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="analytics-stat-cards">
+        <Stat icon={MousePointerClick} label="Total Buy Now Clicks" value={data.total_clicks} sub="All-time Amazon redirects" testid="stat-total-clicks" />
+        <Stat icon={TrendingUp} label="Clicks (24h)" value={data.clicks_24h} sub="Last 24 hours" testid="stat-clicks-24h" />
+        <Stat icon={Inbox} label="New Messages" value={data.new_messages} sub={`${data.total_messages} total enquiries`} testid="stat-new-messages" />
+        <Stat icon={Package} label="Products" value={data.total_products} sub="Live in catalogue" testid="stat-products" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Daily chart */}
+        <div className="bg-ink-900 border border-neutral-900 p-6" data-testid="analytics-daily-chart">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-heading uppercase tracking-widest text-sm text-neon">Clicks · Last 7 Days</h3>
+            <span className="text-metal-dim text-xs">{data.clicks_7d} total</span>
+          </div>
+          <div className="flex items-end gap-2 h-44">
+            {data.daily_clicks.map((d) => (
+              <div key={d.date} className="flex-1 flex flex-col items-center gap-2">
+                <div className="w-full flex items-end h-full">
+                  <div
+                    className="w-full bg-neon hover:bg-neon-hover transition-all"
+                    style={{ height: `${(d.clicks / maxDaily) * 100}%`, minHeight: d.clicks > 0 ? "4px" : "1px" }}
+                    title={`${d.date}: ${d.clicks} clicks`}
+                  />
+                </div>
+                <span className="text-[10px] text-metal-dim uppercase tracking-widest">
+                  {new Date(d.date).toLocaleDateString("en-GB", { weekday: "short" })}
+                </span>
+                <span className="text-xs text-white font-heading">{d.clicks}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top products */}
+        <div className="bg-ink-900 border border-neutral-900 p-6" data-testid="analytics-top-products">
+          <h3 className="font-heading uppercase tracking-widest text-sm text-neon mb-4">Top Products by Clicks</h3>
+          {data.top_products.length === 0 ? (
+            <p className="text-metal-dim text-sm">No clicks tracked yet. Buy Now events will appear here.</p>
+          ) : (
+            <ul className="space-y-3">
+              {data.top_products.map((p, i) => {
+                const max = data.top_products[0].clicks || 1;
+                return (
+                  <li key={p.product_id} className="flex items-center gap-4">
+                    <span className="font-heading text-2xl text-neon w-8">{String(i + 1).padStart(2, "0")}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-heading uppercase tracking-wider text-sm truncate pr-3">{p.name}</span>
+                        <span className="text-neon font-heading text-sm">{p.clicks}</span>
+                      </div>
+                      <div className="h-1 bg-neutral-900 mt-2 overflow-hidden">
+                        <div className="h-full bg-neon transition-all" style={{ width: `${(p.clicks / max) * 100}%` }} />
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Recent clicks */}
+      <div className="bg-ink-900 border border-neutral-900 p-6" data-testid="analytics-recent-clicks">
+        <h3 className="font-heading uppercase tracking-widest text-sm text-neon mb-4">Recent Buy Now Events</h3>
+        {data.recent_clicks.length === 0 ? (
+          <p className="text-metal-dim text-sm">No events yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-metal-dim text-xs uppercase tracking-widest border-b border-neutral-900">
+                  <th className="text-left py-2 pr-4">When</th>
+                  <th className="text-left py-2 pr-4">Product</th>
+                  <th className="text-left py-2 pr-4">Referrer</th>
+                  <th className="text-left py-2">User Agent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recent_clicks.map((c) => (
+                  <tr key={c.id} className="border-b border-neutral-900/60">
+                    <td className="py-2 pr-4 text-white whitespace-nowrap">{new Date(c.created_at).toLocaleString()}</td>
+                    <td className="py-2 pr-4 text-neon">{c.product_name}</td>
+                    <td className="py-2 pr-4 text-metal-dim truncate max-w-[180px]">{c.referrer || "—"}</td>
+                    <td className="py-2 text-metal-dim truncate max-w-[260px]">{c.user_agent}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- MESSAGES ---------------- */
 function MessagesPanel() {
   const [messages, setMessages] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -35,7 +194,6 @@ function MessagesPanel() {
       setLoading(false);
     }
   };
-
   useEffect(() => { load(); }, []);
 
   const sendReply = async () => {
@@ -87,9 +245,7 @@ function MessagesPanel() {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-heading uppercase tracking-wider text-sm truncate">
-                    {m.full_name}
-                  </span>
+                  <span className="font-heading uppercase tracking-wider text-sm truncate">{m.full_name}</span>
                   <span className={`text-[10px] uppercase tracking-widest px-2 py-1 ${m.status === "replied" ? "text-black bg-neon" : "text-neon border border-neon/50"}`}>
                     {m.status}
                   </span>
@@ -170,29 +326,38 @@ function MessagesPanel() {
   );
 }
 
+/* ---------------- PRODUCT FORM ---------------- */
 function ProductForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(
-    initial || {
-      name: "",
-      short_description: "",
-      description: "",
-      image_url: "",
-      amazon_url: "",
-      specs: {},
-    }
+    initial || { name: "", short_description: "", description: "", image_url: "", amazon_url: "", specs: {} }
   );
-  const [specRows, setSpecRows] = useState(
-    Object.entries(initial?.specs || {}).map(([k, v]) => ({ k, v }))
-  );
-
+  const [specRows, setSpecRows] = useState(Object.entries(initial?.specs || {}).map(([k, v]) => ({ k, v })));
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const onUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api.post("/uploads/image", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      update("image_url", res.data.url);
+      toast.success("Image uploaded");
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail) || "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const submit = (e) => {
     e.preventDefault();
     const specs = {};
-    for (const r of specRows) {
-      if (r.k.trim()) specs[r.k.trim()] = r.v;
-    }
+    for (const r of specRows) { if (r.k.trim()) specs[r.k.trim()] = r.v; }
     onSave({ ...form, specs });
   };
 
@@ -201,7 +366,37 @@ function ProductForm({ initial, onSave, onCancel }) {
       <input className={inputCls} placeholder="Product name" required value={form.name} onChange={(e) => update("name", e.target.value)} data-testid="product-form-name" />
       <input className={inputCls} placeholder="Short description" required value={form.short_description} onChange={(e) => update("short_description", e.target.value)} data-testid="product-form-short" />
       <textarea rows={4} className={inputCls} placeholder="Full description" required value={form.description} onChange={(e) => update("description", e.target.value)} data-testid="product-form-description" />
-      <input className={inputCls} placeholder="Image URL" required value={form.image_url} onChange={(e) => update("image_url", e.target.value)} data-testid="product-form-image" />
+
+      {/* Image: paste URL OR upload */}
+      <div className="border border-neutral-800 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="font-heading uppercase tracking-widest text-sm text-neon">Product Image</label>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            data-testid="product-form-upload-btn"
+            className="inline-flex items-center gap-2 border border-neon text-neon font-heading uppercase tracking-wider text-xs px-4 py-2 hover:bg-neon/10 disabled:opacity-60"
+          >
+            <Upload className="h-3 w-3" /> {uploading ? "Uploading…" : "Upload"}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onUpload}
+            data-testid="product-form-file-input"
+          />
+        </div>
+        <input className={inputCls} placeholder="…or paste an image URL" required value={form.image_url} onChange={(e) => update("image_url", e.target.value)} data-testid="product-form-image" />
+        {form.image_url && (
+          <div className="bg-black border border-neutral-900 p-3 flex items-center justify-center">
+            <img src={resolveImg(form.image_url)} alt="preview" className="max-h-32" />
+          </div>
+        )}
+      </div>
+
       <input className={inputCls} placeholder="Amazon URL" required value={form.amazon_url} onChange={(e) => update("amazon_url", e.target.value)} data-testid="product-form-amazon" />
 
       <div className="border border-neutral-900 p-4 space-y-2">
@@ -230,9 +425,10 @@ function ProductForm({ initial, onSave, onCancel }) {
   );
 }
 
+/* ---------------- PRODUCTS PANEL ---------------- */
 function ProductsPanel() {
   const [products, setProducts] = useState([]);
-  const [editing, setEditing] = useState(null); // null | "new" | product
+  const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -240,11 +436,8 @@ function ProductsPanel() {
     try {
       const r = await api.get("/products");
       setProducts(r.data || []);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
-
   useEffect(() => { load(); }, []);
 
   const save = async (data) => {
@@ -291,11 +484,7 @@ function ProductsPanel() {
             </h3>
             <button onClick={() => setEditing(null)} className="text-metal-dim hover:text-white"><X className="h-5 w-5" /></button>
           </div>
-          <ProductForm
-            initial={editing === "new" ? null : editing}
-            onSave={save}
-            onCancel={() => setEditing(null)}
-          />
+          <ProductForm initial={editing === "new" ? null : editing} onSave={save} onCancel={() => setEditing(null)} />
         </div>
       )}
 
@@ -305,8 +494,8 @@ function ProductsPanel() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.map((p) => (
             <div key={p.id} className="border border-neutral-900 bg-ink-900 p-5" data-testid={`admin-product-${p.id}`}>
-              <div className="aspect-square bg-black flex items-center justify-center mb-4">
-                <img src={p.image_url} alt={p.name} className="max-h-full" />
+              <div className="aspect-square bg-black flex items-center justify-center mb-4 overflow-hidden">
+                <img src={resolveImg(p.image_url)} alt={p.name} className="max-h-full" />
               </div>
               <h3 className="font-heading uppercase tracking-wider text-lg">{p.name}</h3>
               <p className="text-metal-dim text-sm mt-1 line-clamp-2">{p.short_description}</p>
@@ -329,15 +518,19 @@ function ProductsPanel() {
   );
 }
 
+/* ---------------- DASHBOARD ---------------- */
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState("messages");
+  const [tab, setTab] = useState("analytics");
 
-  const handleLogout = () => {
-    logout();
-    navigate("/admin/login");
-  };
+  const handleLogout = () => { logout(); navigate("/admin/login"); };
+
+  const tabs = [
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "messages", label: "Messages", icon: Mail },
+    { id: "products", label: "Products", icon: Package },
+  ];
 
   return (
     <div className="min-h-screen bg-black text-white" data-testid="admin-dashboard">
@@ -357,24 +550,22 @@ export default function AdminDashboard() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-8">
-        <div className="flex gap-2 mb-8 border-b border-neutral-900">
-          <button
-            onClick={() => setTab("messages")}
-            data-testid="admin-tab-messages"
-            className={`inline-flex items-center gap-2 px-5 py-3 font-heading uppercase tracking-wider text-sm border-b-2 ${tab === "messages" ? "border-neon text-neon" : "border-transparent text-metal-dim hover:text-white"}`}
-          >
-            <Mail className="h-4 w-4" /> Messages
-          </button>
-          <button
-            onClick={() => setTab("products")}
-            data-testid="admin-tab-products"
-            className={`inline-flex items-center gap-2 px-5 py-3 font-heading uppercase tracking-wider text-sm border-b-2 ${tab === "products" ? "border-neon text-neon" : "border-transparent text-metal-dim hover:text-white"}`}
-          >
-            <Package className="h-4 w-4" /> Products
-          </button>
+        <div className="flex gap-2 mb-8 border-b border-neutral-900 overflow-x-auto">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              data-testid={`admin-tab-${t.id}`}
+              className={`inline-flex items-center gap-2 px-5 py-3 font-heading uppercase tracking-wider text-sm border-b-2 whitespace-nowrap ${tab === t.id ? "border-neon text-neon" : "border-transparent text-metal-dim hover:text-white"}`}
+            >
+              <t.icon className="h-4 w-4" /> {t.label}
+            </button>
+          ))}
         </div>
 
-        {tab === "messages" ? <MessagesPanel /> : <ProductsPanel />}
+        {tab === "analytics" && <AnalyticsPanel />}
+        {tab === "messages" && <MessagesPanel />}
+        {tab === "products" && <ProductsPanel />}
       </div>
     </div>
   );

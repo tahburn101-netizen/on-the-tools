@@ -11,6 +11,8 @@ import ProductDetail from "./pages/ProductDetail";
 import About from "./pages/About";
 import FAQ from "./pages/FAQ";
 import TradeEnquiries from "./pages/TradeEnquiries";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -42,6 +44,7 @@ function App() {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/contact" element={<TradeEnquiries />} />
               <Route path="/trade" element={<TradeEnquiries />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
             </Route>
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route
@@ -52,6 +55,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

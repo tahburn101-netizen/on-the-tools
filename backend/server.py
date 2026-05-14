@@ -4,14 +4,17 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import os
+import re
 import uuid
 import logging
+import requests
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
+from collections import Counter as CCounter
 
 import bcrypt
 import jwt
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, UploadFile, File, Response, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -27,10 +30,80 @@ db = client[os.environ["DB_NAME"]]
 
 
 # ------------------------------------------------------------
-# Auth helpers
+# Object Storage (Emergent)
+# ------------------------------------------------------------
+STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+APP_NAME = os.environ.get("APP_NAME", "on-the-tools")
+_storage_key: Optional[str] = None
+
+
+def init_storage() -> Optional[str]:
+    global _storage_key
+    if _storage_key:
+        return _storage_key
+    if not EMERGENT_KEY:
+        return None
+    try:
+        resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
+        resp.raise_for_status()
+        _storage_key = resp.json()["storage_key"]
+        return _storage_key
+    except Exception as e:
+        logging.error(f"Storage init failed: {e}")
+        return None
+
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    if not key:
+        raise HTTPException(status_code=500, detail="Storage not available")
+    resp = requests.put(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data,
+        timeout=120,
+    )
+    if resp.status_code == 403:
+        # Refresh and retry once
+        global _storage_key
+        _storage_key = None
+        key = init_storage()
+        resp = requests.put(
+            f"{STORAGE_URL}/objects/{path}",
+            headers={"X-Storage-Key": key, "Content-Type": content_type},
+            data=data,
+            timeout=120,
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_object(path: str):
+    key = init_storage()
+    resp = requests.get(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key},
+        timeout=60,
+    )
+    if resp.status_code == 403:
+        global _storage_key
+        _storage_key = None
+        key = init_storage()
+        resp = requests.get(
+            f"{STORAGE_URL}/objects/{path}",
+            headers={"X-Storage-Key": key},
+            timeout=60,
+        )
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+# ------------------------------------------------------------
+# Auth
 # ------------------------------------------------------------
 JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7-day token for admin convenience
+ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7
 
 
 def hash_password(password: str) -> str:
@@ -79,7 +152,6 @@ async def get_current_admin(
 # Utility
 # ------------------------------------------------------------
 def slugify(text: str) -> str:
-    import re
     text = text.lower().strip()
     text = re.sub(r"[^a-z0-9]+", "-", text)
     return text.strip("-")
@@ -90,7 +162,7 @@ def iso_now() -> str:
 
 
 # ------------------------------------------------------------
-# Pydantic Models
+# Models
 # ------------------------------------------------------------
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -148,6 +220,11 @@ class MessageCreate(BaseModel):
 
 class ReplyCreate(BaseModel):
     body: str
+
+
+class ClickEvent(BaseModel):
+    product_id: str
+    referrer: Optional[str] = ""
 
 
 # ------------------------------------------------------------
@@ -246,6 +323,47 @@ async def delete_product(product_id: str, admin: dict = Depends(get_current_admi
     return {"ok": True}
 
 
+# ---- Image upload ----
+ALLOWED_IMG = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+
+
+@api.post("/uploads/image")
+async def upload_image(file: UploadFile = File(...), admin: dict = Depends(get_current_admin)):
+    if file.content_type not in ALLOWED_IMG:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    ext = (file.filename.rsplit(".", 1)[-1] if file.filename and "." in file.filename else "bin").lower()
+    file_id = str(uuid.uuid4())
+    path = f"{APP_NAME}/products/{file_id}.{ext}"
+    result = put_object(path, data, file.content_type)
+    file_doc = {
+        "id": file_id,
+        "storage_path": result["path"],
+        "original_filename": file.filename or f"{file_id}.{ext}",
+        "content_type": file.content_type,
+        "size": result.get("size", len(data)),
+        "is_deleted": False,
+        "created_at": iso_now(),
+    }
+    await db.files.insert_one(file_doc.copy())
+    public_url = f"/api/files/{result['path']}"
+    return {"url": public_url, "id": file_id, "path": result["path"]}
+
+
+@api.get("/files/{path:path}")
+async def serve_file(path: str):
+    record = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+    try:
+        data, content_type = get_object(path)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"File fetch failed: {e}")
+    return Response(content=data, media_type=record.get("content_type", content_type))
+
+
 # ---- Messages ----
 @api.post("/messages")
 async def submit_message(payload: MessageCreate):
@@ -272,14 +390,6 @@ async def list_messages(admin: dict = Depends(get_current_admin)):
     return docs
 
 
-@api.get("/messages/{message_id}")
-async def get_message(message_id: str, admin: dict = Depends(get_current_admin)):
-    doc = await db.messages.find_one({"id": message_id}, {"_id": 0})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Not found")
-    return doc
-
-
 @api.post("/messages/{message_id}/reply")
 async def reply_message(message_id: str, payload: ReplyCreate, admin: dict = Depends(get_current_admin)):
     reply = {
@@ -297,21 +407,84 @@ async def reply_message(message_id: str, payload: ReplyCreate, admin: dict = Dep
     return reply
 
 
-@api.patch("/messages/{message_id}/status")
-async def update_status(message_id: str, body: dict, admin: dict = Depends(get_current_admin)):
-    new_status = body.get("status", "new")
-    res = await db.messages.update_one({"id": message_id}, {"$set": {"status": new_status}})
-    if res.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Not found")
-    return {"ok": True}
-
-
 @api.delete("/messages/{message_id}")
 async def delete_message(message_id: str, admin: dict = Depends(get_current_admin)):
     res = await db.messages.delete_one({"id": message_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return {"ok": True}
+
+
+# ---- Click tracking & analytics ----
+@api.post("/clicks")
+async def log_click(payload: ClickEvent, request: Request):
+    product = await db.products.find_one({"id": payload.product_id}, {"_id": 0, "name": 1, "slug": 1})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "product_id": payload.product_id,
+        "product_name": product.get("name", ""),
+        "product_slug": product.get("slug", ""),
+        "referrer": payload.referrer or "",
+        "user_agent": request.headers.get("user-agent", "")[:240],
+        "ip": (request.client.host if request.client else "")[:60],
+        "created_at": iso_now(),
+    }
+    await db.clicks.insert_one(doc)
+    return {"ok": True}
+
+
+@api.get("/analytics/summary")
+async def analytics_summary(admin: dict = Depends(get_current_admin)):
+    now = datetime.now(timezone.utc)
+    last_24h = (now - timedelta(hours=24)).isoformat()
+    last_7d = (now - timedelta(days=7)).isoformat()
+    last_30d = (now - timedelta(days=30)).isoformat()
+
+    clicks = await db.clicks.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    msgs = await db.messages.find({}, {"_id": 0, "created_at": 1, "status": 1}).to_list(2000)
+    products = await db.products.find({}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).to_list(1000)
+
+    total_clicks = len(clicks)
+    clicks_24h = sum(1 for c in clicks if c["created_at"] >= last_24h)
+    clicks_7d = sum(1 for c in clicks if c["created_at"] >= last_7d)
+    clicks_30d = sum(1 for c in clicks if c["created_at"] >= last_30d)
+
+    by_product = CCounter()
+    for c in clicks:
+        by_product[c["product_id"]] += 1
+
+    pmap = {p["id"]: p for p in products}
+    top_products = []
+    for pid, count in by_product.most_common(5):
+        p = pmap.get(pid)
+        if p:
+            top_products.append({"product_id": pid, "name": p["name"], "slug": p["slug"], "clicks": count})
+
+    # 7-day daily breakdown
+    daily = {}
+    for i in range(7):
+        d = (now - timedelta(days=i)).date().isoformat()
+        daily[d] = 0
+    for c in clicks:
+        d = c["created_at"][:10]
+        if d in daily:
+            daily[d] += 1
+    daily_series = [{"date": d, "clicks": daily[d]} for d in sorted(daily.keys())]
+
+    return {
+        "total_clicks": total_clicks,
+        "clicks_24h": clicks_24h,
+        "clicks_7d": clicks_7d,
+        "clicks_30d": clicks_30d,
+        "total_messages": len(msgs),
+        "new_messages": sum(1 for m in msgs if m.get("status") == "new"),
+        "total_products": len(products),
+        "top_products": top_products,
+        "daily_clicks": daily_series,
+        "recent_clicks": clicks[:10],
+    }
 
 
 # ------------------------------------------------------------
@@ -331,20 +504,23 @@ async def seed_admin():
             "created_at": iso_now(),
         }
         await db.users.insert_one(doc)
-        logger.info(f"Seeded admin user: {email}")
+        logging.info(f"Seeded admin user: {email}")
     elif not verify_password(password, existing["password_hash"]):
         await db.users.update_one(
             {"email": email}, {"$set": {"password_hash": hash_password(password)}}
         )
-        logger.info(f"Updated admin password for: {email}")
+        logging.info(f"Updated admin password for: {email}")
 
+
+# Use the transparent processed disc image served by the frontend /public folder
+DISC_IMG = "/disc-115mm.png"
 
 SEED_PRODUCTS = [
     {
         "name": "115mm 1mm Metal Cutting Disc",
         "short_description": "Ultra-thin precision cutting for stainless steel and metal sheets.",
         "description": "Engineered for fast, clean cuts on stainless steel, mild steel and metal sheets. The 1mm ultra-thin profile minimises material waste and reduces heat build-up, giving you burr-free finishes every time. EN12413 certified, 13,300 RPM rated.",
-        "image_url": "https://customer-assets.emergentagent.com/job_f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/artifacts/bs3n5039_IMG-20260422-WA0000.jpg",
+        "image_url": DISC_IMG,
         "amazon_url": "https://www.amazon.co.uk/dp/B08EXAMPLE1",
         "specs": {
             "Diameter": "115mm (4.5\")",
@@ -354,13 +530,12 @@ SEED_PRODUCTS = [
             "Standard": "EN12413 / ISO9001",
             "Material": "Aluminium Oxide",
         },
-        "gallery": [],
     },
     {
         "name": "115mm 3mm Metal Cutting Disc",
         "short_description": "All-round 3mm cutting disc for heavy-duty metal work.",
         "description": "The workhorse of the range. A 3mm profile makes this disc ideal for heavy-duty cutting on steel, rebar, and structural metal. Built with reinforced fibreglass mesh for safety and durability under load.",
-        "image_url": "https://customer-assets.emergentagent.com/job_f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/artifacts/bs3n5039_IMG-20260422-WA0000.jpg",
+        "image_url": DISC_IMG,
         "amazon_url": "https://www.amazon.co.uk/dp/B08EXAMPLE2",
         "specs": {
             "Diameter": "115mm (4.5\")",
@@ -370,13 +545,12 @@ SEED_PRODUCTS = [
             "Standard": "EN12413 / ISO9001",
             "Material": "Aluminium Oxide",
         },
-        "gallery": [],
     },
     {
         "name": "115mm 6mm Metal Grinding Disc",
         "short_description": "Heavy-duty 6mm grinding disc for deburring and weld cleaning.",
         "description": "Designed for aggressive stock removal, weld cleaning, and deburring. The 6mm depressed-centre profile delivers long disc life and consistent grinding performance under continuous use.",
-        "image_url": "https://customer-assets.emergentagent.com/job_f207eb6c-e5d0-4f53-a1ed-2d0d257bf71c/artifacts/bs3n5039_IMG-20260422-WA0000.jpg",
+        "image_url": DISC_IMG,
         "amazon_url": "https://www.amazon.co.uk/dp/B08EXAMPLE3",
         "specs": {
             "Diameter": "115mm (4.5\")",
@@ -386,24 +560,34 @@ SEED_PRODUCTS = [
             "Standard": "EN12413 / ISO9001",
             "Material": "Aluminium Oxide",
         },
-        "gallery": [],
     },
 ]
 
 
 async def seed_products():
+    """Idempotent: create if missing, update image_url if outdated."""
     for p in SEED_PRODUCTS:
         existing = await db.products.find_one({"name": p["name"]})
         if existing:
+            # Update image_url + specs to keep them current with seed data
+            update = {}
+            if existing.get("image_url") != p["image_url"]:
+                update["image_url"] = p["image_url"]
+            if existing.get("specs") != p["specs"]:
+                update["specs"] = p["specs"]
+            if update:
+                await db.products.update_one({"id": existing["id"]}, {"$set": update})
+                logging.info(f"Updated seeded product: {p['name']}")
             continue
         doc = {
             "id": str(uuid.uuid4()),
             "slug": slugify(p["name"]),
             **p,
+            "gallery": [],
             "created_at": iso_now(),
         }
         await db.products.insert_one(doc)
-        logger.info(f"Seeded product: {p['name']}")
+        logging.info(f"Seeded product: {p['name']}")
 
 
 # ------------------------------------------------------------
@@ -432,8 +616,16 @@ async def on_startup():
     await db.products.create_index("slug", unique=True)
     await db.products.create_index("id", unique=True)
     await db.messages.create_index("id", unique=True)
+    await db.clicks.create_index("created_at")
+    await db.clicks.create_index("product_id")
+    await db.files.create_index("storage_path", unique=True)
     await seed_admin()
     await seed_products()
+    try:
+        init_storage()
+        logger.info("Storage initialized")
+    except Exception as e:
+        logger.warning(f"Storage init deferred: {e}")
 
 
 @app.on_event("shutdown")

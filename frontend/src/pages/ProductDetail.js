@@ -109,6 +109,15 @@ export default function ProductDetail() {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="product-buy-now-btn"
+                  onClick={() => {
+                    // Fire-and-forget click tracking
+                    api
+                      .post("/clicks", {
+                        product_id: product.id,
+                        referrer: document.referrer || window.location.href,
+                      })
+                      .catch(() => {});
+                  }}
                   className="group inline-flex items-center justify-center gap-3 bg-neon text-black font-heading uppercase tracking-wider px-8 py-4 hover:bg-neon-hover hover:-translate-y-1 transition-all hover:drop-shadow-[0_0_24px_rgba(198,255,0,0.55)]"
                 >
                   <ShoppingCart className="h-5 w-5" />
