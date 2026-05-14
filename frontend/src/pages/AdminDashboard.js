@@ -329,7 +329,7 @@ function MessagesPanel() {
 /* ---------------- PRODUCT FORM ---------------- */
 function ProductForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(
-    initial || { name: "", short_description: "", description: "", image_url: "", amazon_url: "", specs: {} }
+    initial || { name: "", short_description: "", description: "", image_url: "", amazon_url: "", price: "", currency: "GBP", specs: {} }
   );
   const [specRows, setSpecRows] = useState(Object.entries(initial?.specs || {}).map(([k, v]) => ({ k, v })));
   const [uploading, setUploading] = useState(false);
@@ -358,7 +358,8 @@ function ProductForm({ initial, onSave, onCancel }) {
     e.preventDefault();
     const specs = {};
     for (const r of specRows) { if (r.k.trim()) specs[r.k.trim()] = r.v; }
-    onSave({ ...form, specs });
+    const priceValue = form.price === "" || form.price == null ? null : Number(form.price);
+    onSave({ ...form, price: priceValue, specs });
   };
 
   return (
@@ -398,6 +399,30 @@ function ProductForm({ initial, onSave, onCancel }) {
       </div>
 
       <input className={inputCls} placeholder="Amazon URL" required value={form.amazon_url} onChange={(e) => update("amazon_url", e.target.value)} data-testid="product-form-amazon" />
+
+      {/* Price + currency */}
+      <div className="grid grid-cols-3 gap-3">
+        <input
+          className={`${inputCls} col-span-2`}
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Price (e.g. 14.99) — leave blank to hide"
+          value={form.price ?? ""}
+          onChange={(e) => update("price", e.target.value)}
+          data-testid="product-form-price"
+        />
+        <select
+          className={inputCls}
+          value={form.currency || "GBP"}
+          onChange={(e) => update("currency", e.target.value)}
+          data-testid="product-form-currency"
+        >
+          <option value="GBP">GBP £</option>
+          <option value="USD">USD $</option>
+          <option value="EUR">EUR €</option>
+        </select>
+      </div>
 
       <div className="border border-neutral-900 p-4 space-y-2">
         <div className="flex items-center justify-between">
@@ -498,6 +523,12 @@ function ProductsPanel() {
                 <img src={resolveImg(p.image_url)} alt={p.name} className="max-h-full" />
               </div>
               <h3 className="font-heading uppercase tracking-wider text-lg">{p.name}</h3>
+              {p.price != null && (
+                <p className="text-neon font-heading text-lg mt-1" data-testid={`admin-product-price-${p.id}`}>
+                  {(p.currency === "USD" ? "$" : p.currency === "EUR" ? "€" : "£")}
+                  {Number(p.price).toFixed(2)}
+                </p>
+              )}
               <p className="text-metal-dim text-sm mt-1 line-clamp-2">{p.short_description}</p>
               <a href={p.amazon_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-neon text-xs uppercase tracking-widest mt-3">
                 Amazon <ExternalLink className="h-3 w-3" />

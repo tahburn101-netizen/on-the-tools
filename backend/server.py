@@ -180,6 +180,8 @@ class ProductCreate(BaseModel):
     description: str
     image_url: str
     amazon_url: str
+    price: Optional[float] = None
+    currency: Optional[str] = "GBP"
     specs: dict = Field(default_factory=dict)
     gallery: List[str] = Field(default_factory=list)
 
@@ -190,6 +192,8 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     amazon_url: Optional[str] = None
+    price: Optional[float] = None
+    currency: Optional[str] = None
     specs: Optional[dict] = None
     gallery: Optional[List[str]] = None
 
@@ -203,6 +207,8 @@ class Product(BaseModel):
     description: str
     image_url: str
     amazon_url: str
+    price: Optional[float] = None
+    currency: Optional[str] = "GBP"
     specs: dict = Field(default_factory=dict)
     gallery: List[str] = Field(default_factory=list)
     created_at: str
@@ -287,6 +293,8 @@ async def create_product(payload: ProductCreate, admin: dict = Depends(get_curre
         "description": payload.description,
         "image_url": payload.image_url,
         "amazon_url": payload.amazon_url,
+        "price": payload.price,
+        "currency": payload.currency or "GBP",
         "specs": payload.specs,
         "gallery": payload.gallery,
         "created_at": iso_now(),
@@ -522,6 +530,8 @@ SEED_PRODUCTS = [
         "description": "Engineered for fast, clean cuts on stainless steel, mild steel and metal sheets. The 1mm ultra-thin profile minimises material waste and reduces heat build-up, giving you burr-free finishes every time. EN12413 certified, 13,300 RPM rated.",
         "image_url": DISC_IMG,
         "amazon_url": "https://www.amazon.co.uk/dp/B08EXAMPLE1",
+        "price": 14.99,
+        "currency": "GBP",
         "specs": {
             "Diameter": "115mm (4.5\")",
             "Thickness": "1.0mm",
@@ -537,6 +547,8 @@ SEED_PRODUCTS = [
         "description": "The workhorse of the range. A 3mm profile makes this disc ideal for heavy-duty cutting on steel, rebar, and structural metal. Built with reinforced fibreglass mesh for safety and durability under load.",
         "image_url": DISC_IMG,
         "amazon_url": "https://www.amazon.co.uk/dp/B08EXAMPLE2",
+        "price": 16.99,
+        "currency": "GBP",
         "specs": {
             "Diameter": "115mm (4.5\")",
             "Thickness": "3.0mm",
@@ -552,6 +564,8 @@ SEED_PRODUCTS = [
         "description": "Designed for aggressive stock removal, weld cleaning, and deburring. The 6mm depressed-centre profile delivers long disc life and consistent grinding performance under continuous use.",
         "image_url": DISC_IMG,
         "amazon_url": "https://www.amazon.co.uk/dp/B08EXAMPLE3",
+        "price": 19.99,
+        "currency": "GBP",
         "specs": {
             "Diameter": "115mm (4.5\")",
             "Thickness": "6.0mm",
@@ -565,16 +579,18 @@ SEED_PRODUCTS = [
 
 
 async def seed_products():
-    """Idempotent: create if missing, update image_url if outdated."""
+    """Idempotent: create if missing, update image_url/specs/price if outdated."""
     for p in SEED_PRODUCTS:
         existing = await db.products.find_one({"name": p["name"]})
         if existing:
-            # Update image_url + specs to keep them current with seed data
             update = {}
             if existing.get("image_url") != p["image_url"]:
                 update["image_url"] = p["image_url"]
             if existing.get("specs") != p["specs"]:
                 update["specs"] = p["specs"]
+            if existing.get("price") is None and p.get("price") is not None:
+                update["price"] = p["price"]
+                update["currency"] = p.get("currency", "GBP")
             if update:
                 await db.products.update_one({"id": existing["id"]}, {"$set": update})
                 logging.info(f"Updated seeded product: {p['name']}")

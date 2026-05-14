@@ -109,7 +109,7 @@ export default function Home() {
               </Link>
             </motion.div>
 
-            <motion.div variants={item} className="mt-12 grid grid-cols-3 gap-6 max-w-md">
+            <motion.div variants={item} className="mt-10 grid grid-cols-3 gap-6 max-w-md">
               {[
                 { icon: Target, label: "Precision", sub: "Cutting" },
                 { icon: ShieldCheck, label: "Long-Lasting", sub: "Performance" },
@@ -122,6 +122,18 @@ export default function Home() {
                 </div>
               ))}
             </motion.div>
+
+            {/* Trust strip — fills the bottom of the left column to balance the disc */}
+            <motion.div
+              variants={item}
+              className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-metal-dim text-xs uppercase tracking-widest"
+              data-testid="hero-trust-strip"
+            >
+              <span className="flex items-center gap-2"><Award className="h-4 w-4 text-neon" /> EN12413</span>
+              <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-neon" /> ISO 9001</span>
+              <span className="flex items-center gap-2"><Truck className="h-4 w-4 text-neon" /> Fast UK Ship</span>
+              <span className="flex items-center gap-2"><Star className="h-4 w-4 text-neon fill-neon" /> 4.9 / 5 Rated</span>
+            </motion.div>
           </motion.div>
 
           <motion.div
@@ -131,11 +143,11 @@ export default function Home() {
             transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             className="relative hidden lg:flex items-center justify-center"
           >
-            <div className="absolute -inset-12 bg-neon/15 blur-3xl rounded-full animate-pulse" />
+            <div className="absolute -inset-8 bg-neon/15 blur-3xl rounded-full animate-pulse" />
             <motion.img
               src="/disc-115mm.png"
               alt="On The Tools Cutting Disc"
-              className="relative max-w-[540px] w-full drop-shadow-[0_0_80px_rgba(198,255,0,0.35)]"
+              className="relative max-w-[440px] xl:max-w-[480px] w-full drop-shadow-[0_0_80px_rgba(198,255,0,0.35)]"
               animate={{ rotate: 360 }}
               transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
               data-testid="hero-product-image"

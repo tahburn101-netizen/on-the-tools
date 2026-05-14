@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 
 import { AuthProvider } from "./context/AuthContext";
 import Layout from "./components/Layout";
+import CookieBanner from "./components/CookieBanner";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -57,6 +58,7 @@ function App() {
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieBanner />
         </BrowserRouter>
       </AuthProvider>
     </div>

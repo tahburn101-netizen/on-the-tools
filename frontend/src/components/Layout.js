@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Menu, X, ShoppingCart, ArrowRight } from "lucide-react";
 import Logo from "./Logo";
+import NewsletterSignup from "./NewsletterSignup";
 import { motion, AnimatePresence } from "framer-motion";
 
 const links = [
@@ -150,6 +151,9 @@ function Footer() {
             <li>Trade Discounts</li>
             <li>Expert Support</li>
           </ul>
+          <div className="mt-5">
+            <NewsletterSignup />
+          </div>
         </div>
       </div>
       <div className="border-t border-neutral-900 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 lg:px-10 max-w-7xl mx-auto text-metal-dim text-xs tracking-widest uppercase">
