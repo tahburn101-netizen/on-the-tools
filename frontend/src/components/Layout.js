@@ -135,8 +135,17 @@ function Footer() {
           </ul>
         </div>
         <div>
-          <h4 className="font-heading text-neon tracking-widest text-sm mb-4">Promise</h4>
+          <h4 className="font-heading text-neon tracking-widest text-sm mb-4">Get In Touch</h4>
           <ul className="space-y-2 text-white/80 text-sm">
+            <li>
+              <a
+                href="mailto:ottcuttungedgesupplies@gmail.com"
+                className="hover:text-neon break-all"
+                data-testid="footer-email-link"
+              >
+                ottcuttungedgesupplies@gmail.com
+              </a>
+            </li>
             <li>Fast UK Delivery</li>
             <li>Trade Discounts</li>
             <li>Expert Support</li>

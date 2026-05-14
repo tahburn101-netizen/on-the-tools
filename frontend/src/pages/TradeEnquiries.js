@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, Package, Headphones, Lock, ArrowRight } from "lucide-react";
+import { ShieldCheck, Package, Headphones, Lock, ArrowRight, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "../lib/api";
+
+const CONTACT_EMAIL = "ottcuttungedgesupplies@gmail.com";
 
 export default function TradeEnquiries() {
   const [params] = useSearchParams();
@@ -92,6 +94,24 @@ export default function TradeEnquiries() {
                 </li>
               ))}
             </ul>
+
+            {/* Direct email card */}
+            <a
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Trade Enquiry — On The Tools")}&body=${encodeURIComponent("Hi On The Tools team,\n\nI'd like to enquire about:\n- Product:\n- Quantity:\n- Delivery location:\n\nThanks,")}`}
+              data-testid="contact-mailto"
+              className="mt-10 group flex items-center justify-between gap-4 border border-neutral-800 bg-ink-900 p-5 hover:border-neon transition-all"
+            >
+              <div className="flex items-center gap-4">
+                <div className="border border-neon/40 p-3 group-hover:bg-neon/10 transition-colors">
+                  <Mail className="h-5 w-5 text-neon" />
+                </div>
+                <div>
+                  <p className="font-heading uppercase tracking-widest text-xs text-neon">Prefer Email?</p>
+                  <p className="text-white text-sm break-all">{CONTACT_EMAIL}</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-neon transition-transform group-hover:translate-x-1" />
+            </a>
           </motion.div>
 
           {/* Right form */}

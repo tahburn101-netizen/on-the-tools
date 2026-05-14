@@ -126,7 +126,7 @@ export default function PrivacyPolicy() {
           <Section title="11. Contact Us" testid="privacy-section-11">
             <p>If you have any questions about this Privacy Policy or how your data is handled, get in touch:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Email:</strong> privacy@onthetools.com</li>
+              <li><strong>Email:</strong> <a className="text-neon hover:underline" href="mailto:ottcuttungedgesupplies@gmail.com">ottcuttungedgesupplies@gmail.com</a></li>
               <li><strong>Trade enquiries:</strong> via the contact form on our Site</li>
             </ul>
           </Section>

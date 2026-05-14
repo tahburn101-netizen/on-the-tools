@@ -27,9 +27,9 @@ const HERO_BG =
 const TESTIMONIAL_BG =
   "https://images.unsplash.com/photo-1564182842519-8a3b2af3e228?crop=entropy&cs=srgb&fm=jpg&q=85&w=1600";
 const SITE_GRID = [
-  "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
-  "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
-  "https://images.unsplash.com/photo-1581094794329-c8112a89af12?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
+  "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
+  "/workshop.jpg",
+  "/industry.jpg",
 ];
 
 const stagger = {
@@ -69,7 +69,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/20" />
         <Sparks count={40} />
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-16 sm:py-24 lg:py-32 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-16 sm:py-20 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           <motion.div initial="hidden" animate="show" variants={stagger}>
             <motion.p
               variants={item}
@@ -148,13 +148,13 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.4, duration: 0.8 }}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-metal-dim"
+          className="hidden lg:flex absolute bottom-4 left-1/2 -translate-x-1/2 flex-col items-center gap-2 text-metal-dim"
         >
           <span className="text-[10px] uppercase tracking-[0.4em]">Scroll</span>
           <motion.div
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 1.6, repeat: Infinity }}
-            className="w-px h-12 bg-gradient-to-b from-neon to-transparent"
+            className="w-px h-8 bg-gradient-to-b from-neon to-transparent"
           />
         </motion.div>
       </section>
@@ -186,7 +186,7 @@ export default function Home() {
       <section className="bg-black py-16 sm:py-20 border-b border-neutral-900" data-testid="stats-section">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { value: 1200000, suffix: "+", label: "Cuts Made" },
+            { value: 1.2, suffix: "M+", label: "Cuts Made", decimals: 1 },
             { value: 850, suffix: "+", label: "Trade Customers" },
             { value: 13300, suffix: " RPM", label: "Disc Rating" },
             { value: 99, suffix: "%", label: "On-Time Delivery" },
@@ -197,11 +197,11 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="border border-neutral-900 bg-ink-900 p-6 hover-lift hover:border-neon/40"
+              className="border border-neutral-900 bg-ink-900 p-6 hover-lift hover:border-neon/40 overflow-hidden"
               data-testid={`stat-card-${i}`}
             >
-              <div className="text-4xl sm:text-5xl font-heading text-neon">
-                <AnimatedCounter to={s.value} suffix={s.suffix} duration={2.2} />
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-heading text-neon truncate">
+                <AnimatedCounter to={s.value} suffix={s.suffix} decimals={s.decimals || 0} duration={2.2} />
               </div>
               <div className="mt-2 font-heading uppercase tracking-wider text-xs text-white/80">{s.label}</div>
             </motion.div>
