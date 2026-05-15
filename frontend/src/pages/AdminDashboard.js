@@ -368,29 +368,10 @@ function ProductForm({ initial, onSave, onCancel }) {
       <input className={inputCls} placeholder="Short description" required value={form.short_description} onChange={(e) => update("short_description", e.target.value)} data-testid="product-form-short" />
       <textarea rows={4} className={inputCls} placeholder="Full description" required value={form.description} onChange={(e) => update("description", e.target.value)} data-testid="product-form-description" />
 
-      {/* Image: paste URL OR upload */}
+      {/* Image: paste URL */}
       <div className="border border-neutral-800 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="font-heading uppercase tracking-widest text-sm text-neon">Product Image</label>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            data-testid="product-form-upload-btn"
-            className="inline-flex items-center gap-2 border border-neon text-neon font-heading uppercase tracking-wider text-xs px-4 py-2 hover:bg-neon/10 disabled:opacity-60"
-          >
-            <Upload className="h-3 w-3" /> {uploading ? "Uploading…" : "Upload"}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onUpload}
-            data-testid="product-form-file-input"
-          />
-        </div>
-        <input className={inputCls} placeholder="…or paste an image URL" required value={form.image_url} onChange={(e) => update("image_url", e.target.value)} data-testid="product-form-image" />
+        <label className="font-heading uppercase tracking-widest text-sm text-neon block">Product Image URL</label>
+        <input className={inputCls} placeholder="Paste an image URL (e.g. https://...)" required value={form.image_url} onChange={(e) => update("image_url", e.target.value)} data-testid="product-form-image" />
         {form.image_url && (
           <div className="bg-black border border-neutral-900 p-3 flex items-center justify-center">
             <img src={resolveImg(form.image_url)} alt="preview" className="max-h-32" />
